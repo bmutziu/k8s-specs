@@ -61,7 +61,7 @@ serverFiles:
           summary: Application is too slow
           description: More then 5% of requests are slower than 0.25s
       - alert: TooManyRequests
-        expr: sum(rate(nginx_ingress_controller_requests[5m])) by (ingress) / sum(label_join(kube_deployment_status_replicas, "ingress", ",", "deployment")) by (ingress) > 0.1
+        expr: sum(rate(nginx_ingress_controller_requests[5m])) by (ingress) / sum(label_join(kube_deployment_status_replicas, "ingress", ",", "deployment")) by (ingress) > 0.05
         labels:
           severity: notify
         annotations:
@@ -102,8 +102,9 @@ alertmanagerFiles:
     receivers:
     - name: slack
       slack_configs:
-      - api_url: "https://hooks.slack.com/services/@T308SC7HD@/@BSJ7052SY@/@KyhFcjsBrwALlQN0DdtymzwZ@"
+      - api_url: "https://hooks.slack.com/services/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"
         send_resolved: true
+        channel: "#testing"
         title: "{{ .CommonAnnotations.summary }}"
         text: "{{ .CommonAnnotations.description }}"
         title_link: http://my-prometheus.com/alerts

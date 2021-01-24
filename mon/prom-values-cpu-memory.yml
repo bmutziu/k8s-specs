@@ -142,8 +142,9 @@ alertmanagerFiles:
     receivers:
     - name: slack
       slack_configs:
-      - api_url: "https://hooks.slack.com/services/@T308SC7HD@/@BSJ7052SY@/@KyhFcjsBrwALlQN0DdtymzwZ@"
+      - api_url: "https://hooks.slack.com/services/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"
         send_resolved: true
+        channel: "#testing"
         title: "{{ .CommonAnnotations.summary }}"
         text: "{{ .CommonAnnotations.description }}"
         title_link: http://my-prometheus.com/alerts
