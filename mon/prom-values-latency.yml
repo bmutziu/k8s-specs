@@ -58,8 +58,9 @@ serverFiles:
         labels:
           severity: notify
         annotations:
-          summary: Application is too slow
-          description: More then 5% of requests are slower than 0.25s
+          identifier: '{{ $labels.ingress }}'
+          summary: "Application is too slow (ingress {{ $labels.ingress }})"
+          description: "More then 5% of requests are slower than 0.25s Labels: {{ $labels }}"
     - name: nodes
       rules:
       - alert: TooManyNodes
@@ -68,16 +69,18 @@ serverFiles:
         labels:
           severity: notify
         annotations:
+          identifier: TMN
           summary: Cluster increased
-          description: The number of the nodes in the cluster increased
+          description: "The number of the nodes in the cluster increased"
       - alert: TooFewNodes
         expr: count(kube_node_info) < 1
         for: 1m
         labels:
           severity: notify
         annotations:
+          identifier: TFN
           summary: Cluster decreased
-          description: The number of the nodes in the cluster decreased
+          description: "The number of the nodes in the cluster decreased"
 alertmanagerFiles:
   alertmanager.yml:
     global: {}
@@ -95,9 +98,32 @@ alertmanagerFiles:
     receivers:
     - name: slack
       slack_configs:
-      - api_url: "https://hooks.slack.com/services/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"
+      - api_url: "https://hooks.slack.com/services/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"
         send_resolved: true
-        channel: "#testing"
-        title: "{{ .CommonAnnotations.summary }}"
-        text: "{{ .CommonAnnotations.description }}"
-        title_link: http://my-prometheus.com/alerts
+        channel: '#testing'
+        title: '{{ template "slack.mon.title" . }}'
+        text: '{{ template "slack.mon.text" . }}'
+        title_link: http://mon.34.246.236.205.nip.io/alerts
+    templates:
+    - /etc/config/mon.tmpl
+
+  mon.tmpl: |
+    {{ define "__single_message_title" }}{{ range .Alerts.Firing }}{{ .Labels.alertname }} @ {{ .Annotations.summary }}{{ end }}{{ range .Alerts.Resolved }}{{ .Labels.alertname }} @ {{ .Annotations.summary }}{{ end }}{{ end }}
+    {{ define "slack.mon.title" }}[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ if or (and (eq (len .Alerts.Firing) 1) (eq (len .Alerts.Resolved) 0)) (and (eq (len .Alerts.Firing) 0) (eq (len .Alerts.Resolved) 1)) }}{{ template "__single_message_title" . }}{{ end }}{{ end }}
+    {{ define "slack.mon.text" }}
+       {{ if or (and (eq (len .Alerts.Firing) 1) (eq (len .Alerts.Resolved) 0)) (and (eq (len .Alerts.Firing) 0) (eq (len .Alerts.Resolved) 1)) }}
+          {{ range .Alerts.Firing }}{{ .Annotations.description }}{{ end }}
+          {{ range .Alerts.Resolved }}{{ .Annotations.description }}{{ end }}
+       {{ else }}
+          {{ if gt (len .Alerts.Firing) 0 }}
+          *Alerts Firing:*
+             {{ range .Alerts.Firing }}- {{ .Annotations.identifier }}: {{ .Annotations.description }}
+             {{ end }}
+          {{ end }}
+         {{ if gt (len .Alerts.Resolved) 0 }}
+         *Alerts Resolved:*
+            {{ range .Alerts.Resolved }}- {{ .Annotations.identifier }}: {{ .Annotations.description }}
+            {{ end }}
+        {{ end }}
+       {{ end }}
+    {{ end }}

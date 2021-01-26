@@ -86,8 +86,8 @@ alertmanagerFiles:
     receivers:
     - name: slack
       slack_configs:
-      - api_url: "https://hooks.slack.com/services/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"
+      - api_url: "https://hooks.slack.com/services/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"
         send_resolved: true
         title: "{{ .CommonAnnotations.summary }}"
         text: "{{ .CommonAnnotations.description }}"
-        title_link: http://my-prometheus.com/alerts
+        title_link: http://mon.52.49.38.161.nip.io/alerts
