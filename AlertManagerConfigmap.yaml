@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: alertmanager-templates
+  namespace: metrics
+data:
+    mon.tmpl: |
+      {{ define "slack.mon.title" -}}
+          {{- if .CommonAnnotations.summary -}}
+              {{- .CommonAnnotations.summary -}}
+          {{- else -}}
+              {{- with index .Alerts 0 -}}
+                  {{- .Annotations.summary -}}
+              {{- end -}}
+          {{- end -}}
+      {{- end }}
+      {{ define "slack.mon.text" -}}
+          {{- if .CommonAnnotations.description -}}
+              {{- .CommonAnnotations.description -}}
+          {{- else -}}
+              {{- range $i, $alert := .Alerts }}
+                  {{- "\n" -}} {{- .Annotations.description -}}
+              {{- end -}}
+          {{- end -}}
+      {{- end }}

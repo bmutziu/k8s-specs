@@ -1,0 +1,129 @@
+server:
+  ingress:
+    enabled: true
+    annotations:
+      ingress.kubernetes.io/ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  resources:
+    limits:
+      cpu: 100m
+      memory: 1000Mi
+    requests:
+      cpu: 10m
+      memory: 500Mi
+alertmanager:
+  ingress:
+    enabled: true
+    annotations:
+      ingress.kubernetes.io/ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  resources:
+    limits:
+      cpu: 10m
+      memory: 20Mi
+    requests:
+      cpu: 5m
+      memory: 10Mi
+kubeStateMetrics:
+  resources:
+    limits:
+      cpu: 10m
+      memory: 50Mi
+    requests:
+      cpu: 5m
+      memory: 25Mi
+nodeExporter:
+  resources:
+    limits:
+      cpu: 10m
+      memory: 20Mi
+    requests:
+      cpu: 5m
+      memory: 10Mi
+pushgateway:
+  resources:
+    limits:
+      cpu: 10m
+      memory: 20Mi
+    requests:
+      cpu: 5m
+      memory: 10Mi
+serverFiles:
+  alerts:
+    groups:
+    - name: latency
+      rules:
+      - alert: AppTooSlow
+        expr: sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{le="0.25"}[5m])) by (ingress) / sum(rate(nginx_ingress_controller_request_duration_seconds_count[5m])) by (ingress) < 0.95
+        labels:
+          severity: notify
+        annotations:
+          identifier: '{{ $labels.ingress }}'
+          summary: "Application is too slow (instance {{ $labels.ingress }})"
+          description: "More then 5% of requests are slower than 0.25s L: {{ $labels }}"
+    - name: nodes
+      rules:
+      - alert: TooManyNodes
+        expr: count(kube_node_info) > 3
+        for: 1m
+        labels:
+          severity: notify
+        annotations:
+          identifier: '{{ $labels.kubernetes_node }}'
+          summary: Cluster increased
+          description: The number of the nodes in the cluster increased
+      - alert: TooFewNodes
+        expr: count(kube_node_info) < 11
+        for: 1m
+        labels:
+          severity: notify
+        annotations:
+          identifier: '{{ $labels.kubernetes_node }}'
+          summary: Cluster decreased
+          description: The number of the nodes in the cluster decreased
+alertmanagerFiles:
+  alertmanager.yml:
+    global: {}
+    route:
+      group_wait: 10s
+      group_interval: 5m
+      receiver: slack
+      repeat_interval: 3h
+      routes:
+      - receiver: slack
+        repeat_interval: 5d
+        match:
+          severity: notify
+          frequency: low
+    receivers:
+    - name: slack
+      slack_configs:
+      - api_url: "https://hooks.slack.com/services/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"
+        send_resolved: true
+        channel: '#testing'
+        title: '{{ template "slack.mon.title" . }}'
+        text: '{{ template "slack.mon.text" . }}'
+        title_link: http://mon.52.49.38.161.nip.io/alerts
+    templates:
+    - /etc/config/mon.tmpl
+
+  mon.tmpl: |
+    {{ define "slack.mon.title" -}}
+        {{- if .CommonAnnotations.summary -}}
+            {{- .CommonAnnotations.summary -}}
+        {{- else -}}
+            {{- range $i, $alert := .Alerts }}
+                {{- "\n" -}} {{- .Annotations.summary -}}
+            {{- end -}}
+        {{- end -}}
+    {{- end }}
+    {{ define "slack.mon.text" -}}
+        {{- if .CommonAnnotations.description -}}
+            {{- .CommonAnnotations.description -}}
+        {{- else -}}
+            {{- range $i, $alert := .Alerts }}
+                {{- "\n" -}} {{- .Annotations.identifier -}}
+                {{- "\n" -}} {{- .Annotations.description -}}
+            {{- end -}}
+        {{- end -}}
+    {{- end }}
